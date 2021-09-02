@@ -195,6 +195,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc)
 		operation := in.cfg.JumpTable[op]
+		log.Info("operation run", "op", op)
 		if operation == nil {
 			return nil, &ErrInvalidOpCode{opcode: op}
 		}

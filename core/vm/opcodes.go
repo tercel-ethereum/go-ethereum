@@ -206,6 +206,12 @@ const (
 	SWAP
 )
 
+// 0xc0 -- custom
+const (
+	RANDOM OpCode = 0xc0 + iota
+	EXTOPENAPI
+)
+
 // 0xf0 range - closures.
 const (
 	CREATE OpCode = 0xf0 + iota
@@ -372,6 +378,9 @@ var opCodeToString = map[OpCode]string{
 	LOG3:   "LOG3",
 	LOG4:   "LOG4",
 
+	RANDOM:     "RANDOM",
+	EXTOPENAPI: "EXTOPENAPI",
+
 	// 0xf0 range.
 	CREATE:       "CREATE",
 	CALL:         "CALL",
@@ -533,6 +542,8 @@ var stringToOp = map[string]OpCode{
 	"LOG2":           LOG2,
 	"LOG3":           LOG3,
 	"LOG4":           LOG4,
+	"RANDOM":         RANDOM,
+	"EXTOPENAPI":     EXTOPENAPI,
 	"CREATE":         CREATE,
 	"CREATE2":        CREATE2,
 	"CALL":           CALL,

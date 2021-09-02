@@ -17,8 +17,12 @@
 package vm
 
 import (
+	"crypto/rand"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 	"golang.org/x/crypto/sha3"
@@ -27,6 +31,7 @@ import (
 func opAdd(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	x, y := scope.Stack.pop(), scope.Stack.peek()
 	y.Add(&x, y)
+	log.Info("EVM.opAdd:", "x", x, "y", y)
 	return nil, nil
 }
 
@@ -243,6 +248,8 @@ func opSha3(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byt
 	interpreter.hasher.Write(data)
 	interpreter.hasher.Read(interpreter.hasherBuf[:])
 
+	log.Info("EVM.opSha3:", "offset", offset, "size", size, "data", data, "hasherBuf", interpreter.hasherBuf[:])
+
 	evm := interpreter.evm
 	if evm.Config.EnablePreimageRecording {
 		evm.StateDB.AddPreimage(interpreter.hasherBuf, data)
@@ -274,6 +281,7 @@ func opCaller(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]b
 
 func opCallValue(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	v, _ := uint256.FromBig(scope.Contract.value)
+	log.Info("EVM.opCallValue:", "v", v)
 	scope.Stack.push(v)
 	return nil, nil
 }
@@ -282,6 +290,7 @@ func opCallDataLoad(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext
 	x := scope.Stack.peek()
 	if offset, overflow := x.Uint64WithOverflow(); !overflow {
 		data := getData(scope.Contract.Input, offset, 32)
+		log.Info("EVM.opCallDataLoad:", "offset", offset, "data", data)
 		x.SetBytes(data)
 	} else {
 		x.Clear()
@@ -489,6 +498,7 @@ func opMload(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]by
 	v := scope.Stack.peek()
 	offset := int64(v.Uint64())
 	v.SetBytes(scope.Memory.GetPtr(offset, 32))
+	log.Info("EVM.opMload:", "offset", offset, "v", v)
 	return nil, nil
 }
 
@@ -496,6 +506,7 @@ func opMstore(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]b
 	// pop value of the stack
 	mStart, val := scope.Stack.pop(), scope.Stack.pop()
 	scope.Memory.Set32(mStart.Uint64(), &val)
+	log.Info("EVM.opMstore:", "val", val)
 	return nil, nil
 }
 
@@ -559,6 +570,7 @@ func opMsize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]by
 
 func opGas(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	scope.Stack.push(new(uint256.Int).SetUint64(scope.Contract.Gas))
+	log.Info("EVM.opGas:", "gas", scope.Contract.Gas)
 	return nil, nil
 }
 
@@ -872,4 +884,28 @@ func makeSwap(size int64) executionFunc {
 		scope.Stack.swap(int(size))
 		return nil, nil
 	}
+}
+
+func opRandom(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	ret, err := rand.Int(rand.Reader, big.NewInt(999999))
+	if err != nil {
+		ret = big.NewInt(0)
+	} else {
+		ret = ret.Add(ret, big.NewInt(1))
+	}
+	scope.Stack.push(new(uint256.Int).SetUint64(ret.Uint64()))
+	log.Info("opRandom", "ret", ret)
+	return nil, nil
+}
+
+func opExtOpenApi(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	// TODO
+	ret := scope.Stack.pop()
+	param2 := scope.Stack.pop()
+	param1 := scope.Stack.pop()
+
+	res := interpreter.evm.Context.Coinbase.Bytes()
+	scope.Stack.push(new(uint256.Int).SetBytes(res))
+	log.Info("opExtOpenApi", "ret", ret, "param1", param1, "param2", param2, "res", res)
+	return nil, nil
 }
