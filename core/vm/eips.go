@@ -177,6 +177,15 @@ func opBaseFee(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]
 
 func enableCustom(jt *JumpTable) {
 	// New opcode
+
+	jt[MYOPCODE] = &operation{
+		execute:     opMyOpCode,
+		constantGas: GasQuickStep,
+		minStack:    minStack(2, 1),
+		maxStack:    maxStack(2, 1),
+		returns:     true,
+	}
+
 	jt[RANDOM] = &operation{
 		execute:     opRandom,
 		constantGas: GasQuickStep,
@@ -188,8 +197,8 @@ func enableCustom(jt *JumpTable) {
 	jt[EXTOPENAPI] = &operation{
 		execute:     opExtOpenApi,
 		constantGas: GasQuickStep,
-		minStack:    minStack(4, 1),
-		maxStack:    maxStack(4, 1),
+		minStack:    minStack(2, 1),
+		maxStack:    maxStack(2, 1),
 		returns:     true,
 	}
 }

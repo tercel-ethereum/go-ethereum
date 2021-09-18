@@ -18,7 +18,11 @@ package vm
 
 import (
 	"crypto/rand"
+	"io/ioutil"
 	"math/big"
+
+	"encoding/json"
+	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -779,14 +783,14 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 func opReturn(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	offset, size := scope.Stack.pop(), scope.Stack.pop()
 	ret := scope.Memory.GetPtr(int64(offset.Uint64()), int64(size.Uint64()))
-
+	log.Info("opReturn", "ret", ret)
 	return ret, nil
 }
 
 func opRevert(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	offset, size := scope.Stack.pop(), scope.Stack.pop()
 	ret := scope.Memory.GetPtr(int64(offset.Uint64()), int64(size.Uint64()))
-
+	log.Info("opRevert", "ret", ret)
 	return ret, nil
 }
 
@@ -886,6 +890,17 @@ func makeSwap(size int64) executionFunc {
 	}
 }
 
+func opMyOpCode(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	// TODO
+	paramOffset, paramSize := scope.Stack.pop(), scope.Stack.pop()
+	param := scope.Memory.GetPtr(int64(paramOffset.Uint64()), int64(paramSize.Uint64()))
+	res := big.NewInt(100)
+	scope.Stack.push(new(uint256.Int).SetUint64(res.Uint64()))
+
+	log.Info("opMyOpCode", "param", param, "res", res)
+	return nil, nil
+}
+
 func opRandom(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	ret, err := rand.Int(rand.Reader, big.NewInt(999999))
 	if err != nil {
@@ -900,12 +915,33 @@ func opRandom(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]b
 
 func opExtOpenApi(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	// TODO
-	ret := scope.Stack.pop()
-	param2 := scope.Stack.pop()
-	param1 := scope.Stack.pop()
+	paramOffset, paramSize := scope.Stack.pop(), scope.Stack.pop()
+	param := scope.Memory.GetPtr(int64(paramOffset.Uint64()), int64(paramSize.Uint64()))
+	paramStr := string(param)
+	apiRes, _ := request(paramStr)
+	log.Info("http request", "apiRes", apiRes)
+	res := big.NewInt(0)
+	res2 := big.NewInt(0)
+	if len(apiRes) > 1 {
+		res = big.NewInt(apiRes[0])
+		res2 = big.NewInt(apiRes[1])
+	} else if len(apiRes) > 0 {
+		res = big.NewInt(apiRes[0])
+	}
+	scope.Stack.push(new(uint256.Int).SetUint64(res.Uint64()))
+	scope.Stack.push(new(uint256.Int).SetUint64(res2.Uint64()))
 
-	res := interpreter.evm.Context.Coinbase.Bytes()
-	scope.Stack.push(new(uint256.Int).SetBytes(res))
-	log.Info("opExtOpenApi", "ret", ret, "param1", param1, "param2", param2, "res", res)
+	log.Info("opExtOpenApi", "param", param, "paramStr", paramStr, "res", res, "res2", res2)
 	return nil, nil
+}
+
+func request(url string) ([]int64, error) {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, _ := client.Do(req)
+	body, _ := ioutil.ReadAll(resp.Body)
+	var arr []int64
+	_ = json.Unmarshal([]byte(body), &arr)
+	log.Info("request", "url", url, "resp", body)
+	return arr, nil
 }

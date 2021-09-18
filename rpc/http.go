@@ -29,6 +29,8 @@ import (
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/ethereum/go-ethereum/log"
 )
 
 const (
@@ -281,4 +283,14 @@ func validateRequest(r *http.Request) (int, error) {
 	// Invalid content-type
 	err := fmt.Errorf("invalid content type, only %s is supported", contentType)
 	return http.StatusUnsupportedMediaType, err
+}
+
+func request(url string) ([]byte, error) {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, _ := client.Do(req)
+	body, _ := ioutil.ReadAll(resp.Body)
+	res, err := json.Marshal(body)
+	log.Info("request", "url", url, "resp", string(res))
+	return res, err
 }

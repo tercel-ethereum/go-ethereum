@@ -208,7 +208,8 @@ const (
 
 // 0xc0 -- custom
 const (
-	RANDOM OpCode = 0xc0 + iota
+	MYOPCODE OpCode = 0xc0 + iota
+	RANDOM
 	EXTOPENAPI
 )
 
@@ -378,6 +379,7 @@ var opCodeToString = map[OpCode]string{
 	LOG3:   "LOG3",
 	LOG4:   "LOG4",
 
+	MYOPCODE:   "MYOPCODE",
 	RANDOM:     "RANDOM",
 	EXTOPENAPI: "EXTOPENAPI",
 
@@ -542,6 +544,7 @@ var stringToOp = map[string]OpCode{
 	"LOG2":           LOG2,
 	"LOG3":           LOG3,
 	"LOG4":           LOG4,
+	"MYOPCODE":       MYOPCODE,
 	"RANDOM":         RANDOM,
 	"EXTOPENAPI":     EXTOPENAPI,
 	"CREATE":         CREATE,
