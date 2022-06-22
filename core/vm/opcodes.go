@@ -211,6 +211,7 @@ const (
 	MYOPCODE OpCode = 0xc0 + iota
 	RANDOM
 	EXTOPENAPI
+	EXTSOPENAPI
 )
 
 // 0xf0 range - closures.
@@ -379,9 +380,10 @@ var opCodeToString = map[OpCode]string{
 	LOG3:   "LOG3",
 	LOG4:   "LOG4",
 
-	MYOPCODE:   "MYOPCODE",
-	RANDOM:     "RANDOM",
-	EXTOPENAPI: "EXTOPENAPI",
+	MYOPCODE:    "MYOPCODE",
+	RANDOM:      "RANDOM",
+	EXTOPENAPI:  "EXTOPENAPI",
+	EXTSOPENAPI: "EXTSOPENAPI",
 
 	// 0xf0 range.
 	CREATE:       "CREATE",
@@ -547,6 +549,7 @@ var stringToOp = map[string]OpCode{
 	"MYOPCODE":       MYOPCODE,
 	"RANDOM":         RANDOM,
 	"EXTOPENAPI":     EXTOPENAPI,
+	"EXTSOPENAPI":    EXTSOPENAPI,
 	"CREATE":         CREATE,
 	"CREATE2":        CREATE2,
 	"CALL":           CALL,

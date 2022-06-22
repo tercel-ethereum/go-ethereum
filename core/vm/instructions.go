@@ -20,11 +20,14 @@ import (
 	"crypto/rand"
 	"io/ioutil"
 	"math/big"
+	"reflect"
+	"strconv"
 
 	"encoding/json"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -922,11 +925,12 @@ func opExtOpenApi(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 	log.Info("http request", "apiRes", apiRes)
 	res := big.NewInt(0)
 	res2 := big.NewInt(0)
+
 	if len(apiRes) > 1 {
-		res = big.NewInt(apiRes[0])
-		res2 = big.NewInt(apiRes[1])
+		res = big.NewInt(string2int(apiRes[0]))
+		res2 = big.NewInt(string2int(apiRes[1]))
 	} else if len(apiRes) > 0 {
-		res = big.NewInt(apiRes[0])
+		res = big.NewInt(string2int(apiRes[0]))
 	}
 	scope.Stack.push(new(uint256.Int).SetUint64(res.Uint64()))
 	scope.Stack.push(new(uint256.Int).SetUint64(res2.Uint64()))
@@ -935,13 +939,70 @@ func opExtOpenApi(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 	return nil, nil
 }
 
-func request(url string) ([]int64, error) {
+func opExtSOpenApi(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	// TODO
+	paramOffset, paramSize := scope.Stack.pop(), scope.Stack.pop()
+	param := scope.Memory.GetPtr(int64(paramOffset.Uint64()), int64(paramSize.Uint64()))
+	paramStr := string(param)
+	apiRes, _ := request(paramStr)
+	res := big.NewInt(string2int(apiRes[0]))
+	res2 := big.NewInt(string2int(apiRes[1]))
+	res3 := apiRes[2]
+	// res3 := "fe7fb0d1f59dfe9492ffbf73683fd1e870eec79504c60144cc7f5fc2bad1e611"
+	// res3integer := new(uint256.Int)
+	scope.Stack.push(new(uint256.Int).SetUint64(res.Uint64()))
+	scope.Stack.push(new(uint256.Int).SetUint64(res2.Uint64()))
+
+	// b3 := []byte(res3)
+	// b3len := bytes.Count([]byte(b3), nil)
+	// sign := packBytesSlice(b3, b3len)
+	// sign := common.Hex2Bytes(res3)
+	// scope.Stack.pushN(*new(uint256.Int).SetBytes(common.Hex2Bytes(res3)), *new(uint256.Int))
+	scope.Stack.push(new(uint256.Int).SetBytes(common.Hex2Bytes(res3)))
+	log.Info("opExtSOpenApi", "param", param, "paramStr", paramStr, "res", res, "res2", res2, "res3", res3)
+	// log.Info("opExtSOpenApi", "param", param, "paramStr", paramStr, "res", res, "res2", res2, "res3", res3, "sign", sign, "res3integer", res3integer)
+	return nil, nil
+}
+
+func string2int(v string) int64 {
+	res, _ := strconv.ParseInt(v, 10, 64)
+	return res
+}
+
+func request(url string) ([]string, error) {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, _ := client.Do(req)
 	body, _ := ioutil.ReadAll(resp.Body)
-	var arr []int64
+	var arr []string
 	_ = json.Unmarshal([]byte(body), &arr)
-	log.Info("request", "url", url, "resp", body)
+	log.Info("request", "url", url, "resp", body, "result:", string(body))
 	return arr, nil
 }
+
+func packNum(value reflect.Value) []byte {
+	switch kind := value.Kind(); kind {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return math.U256Bytes(new(big.Int).SetUint64(value.Uint()))
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return math.U256Bytes(big.NewInt(value.Int()))
+	case reflect.Ptr:
+		return math.U256Bytes(new(big.Int).Set(value.Interface().(*big.Int)))
+	default:
+		panic("abi: fatal error")
+	}
+}
+func packBytesSlice(bytes []byte, l int) []byte {
+	len := packNum(reflect.ValueOf(l))
+	return append(len, common.RightPadBytes(bytes, (l+31)/32*32)...)
+}
+
+// func pushStringToStack(scope *ScopeContext, bytes []byte, l int) {
+// 	value := reflect.ValueOf(l)
+// 	switch kind := value.Kind(); kind {
+// 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+// 		scope.Stack.push(new(uint256.Int).SetUint64(value.Uint()))
+// 	default:
+// 		panic("abi: fatal error")
+// 	}
+// }

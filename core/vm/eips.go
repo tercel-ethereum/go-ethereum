@@ -201,4 +201,12 @@ func enableCustom(jt *JumpTable) {
 		maxStack:    maxStack(2, 1),
 		returns:     true,
 	}
+
+	jt[EXTSOPENAPI] = &operation{
+		execute:     opExtSOpenApi,
+		constantGas: GasExtStep,
+		minStack:    minStack(2, 1),
+		maxStack:    maxStack(2, 1),
+		returns:     true,
+	}
 }
